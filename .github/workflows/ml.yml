@@ -23,7 +23,13 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install mlflow dagshub
-
+      
+      - name: Download GloVe Embedding
+        run: |
+          mkdir -p dataset
+          wget http://nlp.stanford.edu/data/glove.6B.zip -O dataset/glove.6B.zip
+          unzip -j dataset/glove.6B.zip glove.6B.100d.txt -d dataset
+      
       - name: Run training script
         run: |
           python mentalhealthcolab.py
