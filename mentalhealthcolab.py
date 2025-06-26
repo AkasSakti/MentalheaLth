@@ -15,8 +15,7 @@ import mlflow
 import mlflow.tensorflow
 
 # ========== SETUP PATH ==========
-# Ganti base_dir sesuai kebutuhan (local/colab)
-base_dir = "/content/drive/MyDrive/Colab Notebooks/research"  # atau path lokal
+base_dir = r"D:\nang jember\Akas Bagus Setiawan\Riset\hahaha\dataset"
 
 # ================== CHAOS DROPOUT FUNCTION ==================
 def chaos_dropout_sequence(length, x0=0.7, r=3.9):
