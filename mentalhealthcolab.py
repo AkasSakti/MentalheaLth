@@ -15,7 +15,7 @@ import mlflow
 import mlflow.tensorflow
 
 # ========== SETUP PATH ==========
-base_dir = r"D:\nang jember\Akas Bagus Setiawan\Riset\hahaha\dataset"
+base_dir = r"dataset"
 
 # ================== CHAOS DROPOUT FUNCTION ==================
 def chaos_dropout_sequence(length, x0=0.7, r=3.9):
