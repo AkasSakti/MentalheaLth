@@ -5,21 +5,26 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:   # Menambahkan tombol manual "Run workflow" di GitHub Actions
 
 jobs:
   train-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install mlflow dagshub
-      - name: Run notebook/script
+
+      - name: Run training script
         run: |
-          python your_train_script.py
+          python mentalhealthcolab.py
       # - name: Deploy, build docker, dsb (opsional)
