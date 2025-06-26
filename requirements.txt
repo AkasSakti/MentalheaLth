@@ -1,8 +1,11 @@
-pandas
+nltk
+shap
 numpy
-scikit-learn
-tensorflow
-mlflow
-dagshub
+pandas
 matplotlib
 seaborn
+tensorflow
+scikit-learn
+imbalanced-learn
+mlflow
+dagshub
