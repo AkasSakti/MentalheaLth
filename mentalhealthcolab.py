@@ -16,6 +16,8 @@ import mlflow.tensorflow
 
 # ========== SETUP PATH ==========
 base_dir = r"dataset"
+artifacts = os.path.join('..', 'MentalheaLth', 'artifacts')
+os.makedirs(artifacts, exist_ok=True)
 
 # ================== CHAOS DROPOUT FUNCTION ==================
 def chaos_dropout_sequence(length, x0=0.7, r=3.9):
@@ -156,8 +158,6 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     shap.save_html(estimator_html_path, shap.summary_plot(sv.values, features=X_val[:200], show=False))
 
     # ================== SAVE MODEL & LOG ARTIFACT ==================
-    artifacts = os.path.join('..', 'MentalheaLth', 'artifacts')
-    os.makedirs(artifacts, exist_ok=True)
     model_path = os.path.join(artifacts, "mental_health_model.h5")
     submission_path = os.path.join(artifacts, "submission.csv")
     model.save(model_path)
