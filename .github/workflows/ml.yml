@@ -5,32 +5,39 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:   # Menambahkan tombol manual "Run workflow" di GitHub Actions
+  workflow_dispatch:
 
 jobs:
   train-and-test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Setup Python
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Python Dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install mlflow dagshub
-      
+          pip install mlflow dagshub shap imbalanced-learn
+
       - name: Download GloVe Embedding
         run: |
           mkdir -p dataset
           wget http://nlp.stanford.edu/data/glove.6B.zip -O dataset/glove.6B.zip
           unzip -j dataset/glove.6B.zip glove.6B.100d.txt -d dataset
-      
-      - name: Run training script
+
+      - name: Create artifacts directory
+        run: |
+          mkdir -p MentalheaLth/artifacts
+
+      - name: Run Training Script
         run: |
           python mentalhealthcolab.py
-      # - name: Deploy, build docker, dsb (opsional)
+
+      # Opsional Deployment/Artifacts ke GitHub Pages, Docker, dll
