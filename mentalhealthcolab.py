@@ -117,7 +117,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     print(classification_report(y_val, val_preds))
     print("AUC:", roc_auc_score(y_val, val_probs))
 
-    # Confusion Matrix
+    # ================== CONFUSION MATRIX ==================
     plt.figure(figsize=(5,5))
     sns.heatmap(confusion_matrix(y_val, val_preds), annot=True, fmt='d', cmap='Blues')
     plt.title("Confusion Matrix")
@@ -127,7 +127,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.savefig(confusion_path)
     plt.close()
 
-    # Precision-Recall Curve
+    # ================== PRC ==================
     from sklearn.metrics import precision_recall_curve
     precision, recall, _ = precision_recall_curve(y_val, val_probs)
     plt.figure()
@@ -139,7 +139,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.savefig(prc_path)
     plt.close()
 
-    # ROC Curve
+    # ================== ROC ==================
     from sklearn.metrics import roc_curve
     fpr, tpr, _ = roc_curve(y_val, val_probs)
     plt.figure()
@@ -151,16 +151,14 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.savefig(roc_path)
     plt.close()
 
-    # SHAP Estimator HTML (force plot untuk satu instance)
+    # ================== SHAP Estimator HTML (FIXED) ==================
     explainer = shap.Explainer(model, X_val[:200])
     sv = explainer(X_val[:200])
     estimator_html_path = os.path.join(artifacts, "estimator.html")
+    shap_html = shap.plots.force(sv[0], matplotlib=False)
+    shap.save_html(estimator_html_path, shap_html)
 
-    # Gunakan force plot (hanya bisa simpan HTML dengan visualizer dari shap.plots.force)
-    force_plot = shap.plots.force(sv[0], matplotlib=False)  # satu instance
-    force_plot.save_html(estimator_html_path)
-
-    # ================== SAVE MODEL & LOG ARTIFACT ==================
+    # ================== SAVE MODEL ==================
     model_path = os.path.join(artifacts, "mental_health_model.h5")
     submission_path = os.path.join(artifacts, "submission.csv")
     model.save(model_path)
@@ -176,14 +174,14 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     pd.DataFrame({'id': test_df['id'], 'label': preds}).to_csv(submission_path, index=False)
     print("✅ Selesai dan submission.csv telah dibuat di:", submission_path)
 
-    # ================== LOG ARTIFACTS TO MLFLOW ==================
+    # ================== LOG TO MLFLOW ==================
     mlflow.log_artifact(model_path)
     mlflow.log_artifact(submission_path)
     mlflow.log_artifact(confusion_path)
     mlflow.log_artifact(prc_path)
     mlflow.log_artifact(roc_path)
     mlflow.log_artifact(estimator_html_path)
-    print("Model, submission.csv, dan visualisasi dilog ke MLflow/DagsHub.")
+    print("✅ Semua artefak dilog ke MLflow/DagsHub.")
 
 # ================== STREAMLIT INFO ==================
 print("\nUntuk menjalankan aplikasi Streamlit, gunakan perintah:")
