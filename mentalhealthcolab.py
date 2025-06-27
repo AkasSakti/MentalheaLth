@@ -151,11 +151,14 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.savefig(roc_path)
     plt.close()
 
-    # SHAP Estimator HTML
+    # SHAP Estimator HTML (force plot untuk satu instance)
     explainer = shap.Explainer(model, X_val[:200])
     sv = explainer(X_val[:200])
     estimator_html_path = os.path.join(artifacts, "estimator.html")
-    shap.save_html(estimator_html_path, shap.summary_plot(sv.values, features=X_val[:200], show=False))
+
+    # Gunakan force plot (hanya bisa simpan HTML dengan visualizer dari shap.plots.force)
+    force_plot = shap.plots.force(sv[0], matplotlib=False)  # satu instance
+    force_plot.save_html(estimator_html_path)
 
     # ================== SAVE MODEL & LOG ARTIFACT ==================
     model_path = os.path.join(artifacts, "mental_health_model.h5")
