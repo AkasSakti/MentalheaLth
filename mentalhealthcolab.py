@@ -114,16 +114,48 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     val_preds = (val_probs > best_t).astype(int)
     print(classification_report(y_val, val_preds))
     print("AUC:", roc_auc_score(y_val, val_probs))
+
+    # Confusion Matrix
+    plt.figure(figsize=(5,5))
     sns.heatmap(confusion_matrix(y_val, val_preds), annot=True, fmt='d', cmap='Blues')
     plt.title("Confusion Matrix")
-    plt.show()
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    confusion_path = os.path.join(artifacts_dir, "training_confusion_matrix.png")
+    plt.savefig(confusion_path)
+    plt.close()
 
-    # ================== SHAP ==================
+    # Precision-Recall Curve
+    from sklearn.metrics import precision_recall_curve
+    precision, recall, _ = precision_recall_curve(y_val, val_probs)
+    plt.figure()
+    plt.plot(recall, precision, marker='.')
+    plt.title('Precision-Recall Curve')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    prc_path = os.path.join(artifacts_dir, "training_precision_recall_curve.png")
+    plt.savefig(prc_path)
+    plt.close()
+
+    # ROC Curve
+    from sklearn.metrics import roc_curve
+    fpr, tpr, _ = roc_curve(y_val, val_probs)
+    plt.figure()
+    plt.plot(fpr, tpr, marker='.')
+    plt.title('ROC Curve')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    roc_path = os.path.join(artifacts_dir, "training_roc_curve.png")
+    plt.savefig(roc_path)
+    plt.close()
+
+    # SHAP Estimator HTML
     explainer = shap.Explainer(model, X_val[:200])
     sv = explainer(X_val[:200])
-    shap.summary_plot(sv.values, features=X_val[:200])
+    estimator_html_path = os.path.join(artifacts_dir, "estimator.html")
+    shap.save_html(estimator_html_path, shap.summary_plot(sv.values, features=X_val[:200], show=False))
 
-     # ================== SAVE MODEL & LOG ARTIFACT ==================
+    # ================== SAVE MODEL & LOG ARTIFACT ==================
     artifacts_dir = os.path.join('..', 'MentalheaLth', 'artifacts')
     os.makedirs(artifacts_dir, exist_ok=True)
     model_path = os.path.join(artifacts_dir, "mental_health_model.h5")
@@ -144,7 +176,11 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     # ================== LOG ARTIFACTS TO MLFLOW ==================
     mlflow.log_artifact(model_path)
     mlflow.log_artifact(submission_path)
-    print("Model dan submission.csv dilog ke MLflow/DagsHub.")
+    mlflow.log_artifact(confusion_path)
+    mlflow.log_artifact(prc_path)
+    mlflow.log_artifact(roc_path)
+    mlflow.log_artifact(estimator_html_path)
+    print("Model, submission.csv, dan visualisasi dilog ke MLflow/DagsHub.")
 
 # ================== STREAMLIT INFO ==================
 print("\nUntuk menjalankan aplikasi Streamlit, gunakan perintah:")
