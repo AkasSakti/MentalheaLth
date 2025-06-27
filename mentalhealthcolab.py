@@ -121,7 +121,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.title("Confusion Matrix")
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    confusion_path = os.path.join(artifacts_dir, "training_confusion_matrix.png")
+    confusion_path = os.path.join(artifacts, "training_confusion_matrix.png")
     plt.savefig(confusion_path)
     plt.close()
 
@@ -133,7 +133,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.title('Precision-Recall Curve')
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    prc_path = os.path.join(artifacts_dir, "training_precision_recall_curve.png")
+    prc_path = os.path.join(artifacts, "training_precision_recall_curve.png")
     plt.savefig(prc_path)
     plt.close()
 
@@ -145,21 +145,21 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     plt.title('ROC Curve')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    roc_path = os.path.join(artifacts_dir, "training_roc_curve.png")
+    roc_path = os.path.join(artifacts, "training_roc_curve.png")
     plt.savefig(roc_path)
     plt.close()
 
     # SHAP Estimator HTML
     explainer = shap.Explainer(model, X_val[:200])
     sv = explainer(X_val[:200])
-    estimator_html_path = os.path.join(artifacts_dir, "estimator.html")
+    estimator_html_path = os.path.join(artifacts, "estimator.html")
     shap.save_html(estimator_html_path, shap.summary_plot(sv.values, features=X_val[:200], show=False))
 
     # ================== SAVE MODEL & LOG ARTIFACT ==================
-    artifacts_dir = os.path.join('..', 'MentalheaLth', 'artifacts')
-    os.makedirs(artifacts_dir, exist_ok=True)
-    model_path = os.path.join(artifacts_dir, "mental_health_model.h5")
-    submission_path = os.path.join(artifacts_dir, "submission.csv")
+    artifacts = os.path.join('..', 'MentalheaLth', 'artifacts')
+    os.makedirs(artifacts, exist_ok=True)
+    model_path = os.path.join(artifacts, "mental_health_model.h5")
+    submission_path = os.path.join(artifacts, "submission.csv")
     model.save(model_path)
     print("Model disimpan di:", model_path)
 
