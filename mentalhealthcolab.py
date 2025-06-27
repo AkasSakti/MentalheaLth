@@ -123,11 +123,13 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     sv = explainer(X_val[:200])
     shap.summary_plot(sv.values, features=X_val[:200])
 
-    # ================== SAVE MODEL & LOG ARTIFACT ==================
-    model_path = os.path.join(base_dir, "mental_health_model.h5")
+     # ================== SAVE MODEL & LOG ARTIFACT ==================
+    artifacts_dir = os.path.join('..', 'MentalheaLth', 'artifacts')
+    os.makedirs(artifacts_dir, exist_ok=True)
+    model_path = os.path.join(artifacts_dir, "mental_health_model.h5")
+    submission_path = os.path.join(artifacts_dir, "submission.csv")
     model.save(model_path)
-    mlflow.log_artifact(model_path)
-    print("Model disimpan dan dilog ke MLflow/DagsHub:", model_path)
+    print("Model disimpan di:", model_path)
 
     # ================== SUBMISSION ==================
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
@@ -136,5 +138,15 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     tpad = pad_sequences(seq, maxlen=50, padding='post')
     preds = (model.predict(tpad) > best_t).astype(int).flatten()
-    pd.DataFrame({'id': test_df['id'], 'label': preds}).to_csv(os.path.join(base_dir, "submission.csv"), index=False)
-    print("✅ Selesai dan submission.csv telah dibuat.")
+    pd.DataFrame({'id': test_df['id'], 'label': preds}).to_csv(submission_path, index=False)
+    print("✅ Selesai dan submission.csv telah dibuat di:", submission_path)
+
+    # ================== LOG ARTIFACTS TO MLFLOW ==================
+    mlflow.log_artifact(model_path)
+    mlflow.log_artifact(submission_path)
+    print("Model dan submission.csv dilog ke MLflow/DagsHub.")
+
+# ================== STREAMLIT INFO ==================
+print("\nUntuk menjalankan aplikasi Streamlit, gunakan perintah:")
+print("streamlit run app.py")
+print("Jika di server publik, akses: http://localhost:8501 atau sesuai alamat yang diberikan Streamlit.")
