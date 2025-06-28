@@ -7,6 +7,35 @@ import os
 import re
 import pickle
 
+# ================== DARK EXPRESSIONS ==================
+dark_expressions = [
+    # Ekspresi eksplisit ingin mati
+    "i want to die", "i wanna die", "want to kill myself", "want to end it all", "i'm done with life",
+    "i wish i were dead", "i should be dead", "thinking of suicide", "i'm suicidal", "suicidal thoughts",
+    
+    # Keputusasaan dan kehilangan harapan
+    "i can't go on", "i can't do this anymore", "i'm not okay", "i'm broken", "nothing matters",
+    "i give up", "no reason to live", "everything is pointless", "what's the point", "i'm tired of living",
+
+    # Merasa tidak terlihat / tidak penting
+    "no one would care if i died", "no one cares", "i'm invisible", "i'm alone", "i feel empty",
+    "i'm a burden", "everyone hates me", "they'd be better without me", "i hate myself", "i'm worthless",
+
+    # Ekspresi kesedihan mendalam
+    "crying myself to sleep", "hurts so much", "i'm always sad", "every day is a struggle", 
+    "i can't stop crying", "my heart is heavy", "nothing feels real", "dead inside",
+
+    # Bahasa implisit atau metaforis
+    "lost in darkness", "falling apart", "suffocating", "drowning in my thoughts", 
+    "fading away", "life is meaningless", "there's no light", "trapped in my mind"
+]
+
+def contains_dark_expression(text):
+    text = text.lower()
+    return int(any(expr in text for expr in dark_expressions))
+
+    
+
 # ================== SETUP STREAMLIT ==================
 st.set_page_config(page_title="Mental Health Tweet Classifier", layout="centered")
 st.title("🧠 Mental Health Tweet Classifier")
@@ -65,6 +94,12 @@ if submit and user_input:
     st.markdown(f"### Hasil Prediksi: **{label}**")
     st.write(f"🧪 Probabilitas model: `{prob:.4f}`")
     st.write(f"🎯 Threshold aktif: `{threshold:.2f}`")
+
+    is_dark = contains_dark_expression(user_input)
+    if prob < 0.1 and is_dark:
+        st.warning("⚠️ Kalimat mengandung ekspresi berisiko, tapi model tidak yakin. Perlu review manual!")
+    elif is_dark:
+        st.info("Kalimat mengandung ekspresi berisiko.")
 
 # ================== BATCH PREDIKSI ==================
 st.subheader("📤 Upload File CSV untuk Prediksi Massal")
