@@ -58,6 +58,8 @@ def predict_text(text):
 with st.form("input_form"):
     user_input = st.text_area("Masukkan tweet yang ingin diklasifikasi:")
     submit = st.form_submit_button("🔍 Prediksi")
+st.write(f"Probabilitas model: {prob:.4f}")
+st.write(f"Threshold: {threshold:.2f}")
 
 if submit and user_input:
     label = predict_text(user_input)
