@@ -8,8 +8,7 @@ seaborn==0.12.2
 imbalanced-learn==0.10.1
 nltk==3.8.1
 
-# Dependensi tambahan agar installer tidak error
-markdown-it-py==3.0.0
+markdown-it-py==2.2.0
 mdurl==0.1.2
-pygments==2.19.2
-rich==14.0.0
+pygments==2.15.1
+rich==13.3.5
