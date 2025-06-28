@@ -7,6 +7,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 import os
 import re
 
+# ================== SETUP STREAMLIT ==================
 st.set_page_config(page_title="Mental Health Tweet Classifier", layout="centered")
 st.title("🧠 Mental Health Tweet Classifier")
 st.markdown("Klasifikasi tweet terkait kesehatan mental menggunakan model BiLSTM dan GloVe.")
@@ -32,21 +33,9 @@ def get_tokenizer_and_config():
     oov_index = tokenizer.word_index['<OOV>']
     return tokenizer, oov_index, 20000
 
-# ================== LOAD THRESHOLD ==================
-@st.cache_data
-def load_threshold():
-    try:
-        with open("artifacts/threshold.txt", "r") as f:
-            t = float(f.read().strip())
-            if 0 < t < 1:
-                return t
-    except:
-        pass
-    return 0.5  # fallback default
-
 model = load_model()
 tokenizer, oov_index, num_words = get_tokenizer_and_config()
-threshold = load_threshold()
+threshold = 0.37  # HARD FIXED THRESHOLD
 
 # ================== INFERENCE FUNCTION ==================
 def predict_text(text):
@@ -54,9 +43,8 @@ def predict_text(text):
     seq = tokenizer.texts_to_sequences([cleaned])
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     padded = pad_sequences(seq, maxlen=50, padding='post')
-    prob = model.predict(padded, verbose=0)[0][0]
-    label = "Depresi" if prob > threshold else "Tidak Depresi"
-    return label, prob
+    prob = model.predict(padded)[0][0]
+    return "Depresi" if prob > threshold else "Tidak Depresi"
 
 # ================== MAIN FORM ==================
 with st.form("input_form"):
@@ -64,10 +52,8 @@ with st.form("input_form"):
     submit = st.form_submit_button("🔍 Prediksi")
 
 if submit and user_input:
-    label, prob = predict_text(user_input)
+    label = predict_text(user_input)
     st.markdown(f"### Hasil Prediksi: **{label}**")
-    st.progress(int(prob * 100))
-    st.markdown(f"`Probabilitas`: {prob:.4f} — Threshold: `{threshold:.2f}`")
 
 # ================== BATCH PREDIKSI ==================
 st.subheader("📤 Upload File CSV untuk Prediksi Massal")
@@ -82,11 +68,9 @@ if uploaded:
         seqs = tokenizer.texts_to_sequences(df['clean'])
         seqs = [[t if t < num_words else oov_index for t in s] for s in seqs]
         padded = pad_sequences(seqs, maxlen=50, padding='post')
-        probs = model.predict(padded, verbose=0).flatten()
-        labels = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
-        df['prediction'] = labels
-        df['confidence'] = probs
-        st.dataframe(df[['tweet', 'prediction', 'confidence']].head(10))
+        probs = model.predict(padded).flatten()
+        df['prediction'] = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
+        st.dataframe(df[['tweet', 'prediction']].head(10))
         st.download_button("💾 Download Hasil", df.to_csv(index=False), "prediction_results.csv", "text/csv")
 
 # ================== GRAFIK EVALUASI ==================
