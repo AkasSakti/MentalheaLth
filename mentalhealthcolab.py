@@ -127,8 +127,8 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     # ✅ FIX SHAP SAVE HTML
     explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:50])
     sv = explainer(X_val[:50])
-    est_path = os.path.join(artifacts, "estimator.html")
-    shap.save_html(est_path, sv[0])
+    viz = shap.plots.force(sv[0], matplotlib=False)
+    shap.save_html(est_path, viz)
 
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
     test_df['tweet'] = test_df['tweet'].astype(str).apply(clean_text)
