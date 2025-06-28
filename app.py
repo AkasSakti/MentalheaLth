@@ -4,8 +4,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 import re
 
@@ -39,9 +37,12 @@ def get_tokenizer_and_config():
 def load_threshold():
     try:
         with open("artifacts/threshold.txt", "r") as f:
-            return float(f.read().strip())
+            t = float(f.read().strip())
+            if 0 < t < 1:
+                return t
     except:
-        return 0.5  # fallback default
+        pass
+    return 0.5  # fallback default
 
 model = load_model()
 tokenizer, oov_index, num_words = get_tokenizer_and_config()
@@ -53,7 +54,7 @@ def predict_text(text):
     seq = tokenizer.texts_to_sequences([cleaned])
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     padded = pad_sequences(seq, maxlen=50, padding='post')
-    prob = model.predict(padded)[0][0]
+    prob = model.predict(padded, verbose=0)[0][0]
     label = "Depresi" if prob > threshold else "Tidak Depresi"
     return label, prob
 
@@ -81,7 +82,7 @@ if uploaded:
         seqs = tokenizer.texts_to_sequences(df['clean'])
         seqs = [[t if t < num_words else oov_index for t in s] for s in seqs]
         padded = pad_sequences(seqs, maxlen=50, padding='post')
-        probs = model.predict(padded).flatten()
+        probs = model.predict(padded, verbose=0).flatten()
         labels = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
         df['prediction'] = labels
         df['confidence'] = probs
