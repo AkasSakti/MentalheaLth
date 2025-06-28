@@ -9,30 +9,9 @@ import seaborn as sns
 import os
 import re
 
-# ================== CONFIG ==================
 st.set_page_config(page_title="Mental Health Tweet Classifier", layout="centered")
 st.title("🧠 Mental Health Tweet Classifier")
 st.markdown("Klasifikasi tweet terkait kesehatan mental menggunakan model BiLSTM dan GloVe.")
-
-# ================== LOAD MODEL ==================
-@st.cache_resource
-def load_model():
-    model_path = os.path.join("..", "MentalheaLth", "artifacts", "mental_health_model.h5")
-    return tf.keras.models.load_model(model_path)
-
-model = load_model()
-
-# ================== LOAD TOKENIZER SETUP ==================
-@st.cache_resource
-def get_tokenizer_and_config():
-    num_words = 20000
-    oov_token = '<OOV>'
-    tokenizer = Tokenizer(num_words=num_words, oov_token=oov_token)
-    df = pd.read_csv(os.path.join("dataset", "train.csv"))
-    df['tweet'] = df['tweet'].astype(str).apply(clean_text)
-    tokenizer.fit_on_texts(df['tweet'])
-    oov_index = tokenizer.word_index[oov_token]
-    return tokenizer, oov_index, num_words
 
 # ================== CLEAN TEXT ==================
 def clean_text(text):
@@ -40,6 +19,22 @@ def clean_text(text):
     text = re.sub(r"http\S+|@\w+|#\w+|[^a-z\s]", '', text)
     return re.sub(r"\s+", " ", text).strip()
 
+# ================== LOAD MODEL ==================
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("artifacts/mental_health_model.h5")
+
+# ================== LOAD TOKENIZER SETUP ==================
+@st.cache_resource
+def get_tokenizer_and_config():
+    tokenizer = Tokenizer(num_words=20000, oov_token='<OOV>')
+    df = pd.read_csv("dataset/train.csv")
+    df['tweet'] = df['tweet'].astype(str).apply(clean_text)
+    tokenizer.fit_on_texts(df['tweet'])
+    oov_index = tokenizer.word_index['<OOV>']
+    return tokenizer, oov_index, 20000
+
+model = load_model()
 tokenizer, oov_index, num_words = get_tokenizer_and_config()
 
 # ================== INFERENCE FUNCTION ==================
@@ -85,9 +80,8 @@ if uploaded:
 
 # ================== GRAFIK EVALUASI ==================
 st.subheader("📈 Visualisasi Evaluasi Model")
-artifact_dir = os.path.join("..", "MentalheaLth", "artifacts")
 for chart in ["training_confusion_matrix.png", "training_precision_recall_curve.png", "training_roc_curve.png"]:
-    path = os.path.join(artifact_dir, chart)
+    path = os.path.join("artifacts", chart)
     if os.path.exists(path):
         st.image(path, caption=chart.replace("_", " ").title(), use_column_width=True)
     else:
