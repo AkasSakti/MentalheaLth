@@ -74,8 +74,10 @@ X_train, X_val, y_train, y_val = train_test_split(X_sm, y_sm, test_size=0.2, ran
 
 # ================== MLFLOW SETUP ==================
 mlflow.set_tracking_uri("https://dagshub.com/AkasSakti/MentalheaLth.mlflow")
-os.environ['MLFLOW_TRACKING_USERNAME'] = 'AkasSakti'
-os.environ['MLFLOW_TRACKING_PASSWORD'] = 'b916cd7137017c46794da717b21ff3e3275aca0b'
+mlflow_username = os.getenv('MLFLOW_TRACKING_USERNAME')
+mlflow_password = os.getenv('MLFLOW_TRACKING_PASSWORD')
+os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_username
+os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_password
 mlflow.tensorflow.autolog()
 
 with mlflow.start_run(run_name="mental_health_bilstm"):
