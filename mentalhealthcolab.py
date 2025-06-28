@@ -128,6 +128,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:50])
     sv = explainer(X_val[:50])
     viz = shap.plots.force(sv[0], matplotlib=False)
+    est_path = os.path.join(artifacts, "estimator.html")  # <-- tambahkan baris ini
     shap.save_html(est_path, viz)
 
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
