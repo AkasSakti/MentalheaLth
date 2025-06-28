@@ -9,14 +9,15 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.metrics import Precision, Recall, AUC
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, f1_score, roc_auc_score
+from sklearn.metrics import *
 from imblearn.over_sampling import SMOTE
 import mlflow
 import mlflow.tensorflow
+import joblib
 
 # ========== SETUP PATH ==========
-base_dir = r"dataset"
-artifacts = os.path.join('..', 'MentalheaLth', 'artifacts')
+base_dir = "dataset"
+artifacts = os.path.join("MentalheaLth", "artifacts")
 os.makedirs(artifacts, exist_ok=True)
 
 # ================== CHAOS DROPOUT FUNCTION ==================
@@ -66,18 +67,15 @@ embedding_matrix = load_glove(os.path.join(base_dir, "glove.6B.100d.txt"), 100, 
 
 # ================== SMOTE ==================
 X_flat = X.reshape(len(X), -1)
-sm = SMOTE(random_state=42)
-X_sm, y_sm = sm.fit_resample(X_flat, y)
+X_sm, y_sm = SMOTE(random_state=42).fit_resample(X_flat, y)
 X_sm = X_sm.reshape(-1, 50)
-print("Distribusi setelah SMOTE:", np.bincount(y_sm))
 
 X_train, X_val, y_train, y_val = train_test_split(X_sm, y_sm, test_size=0.2, random_state=42)
 
-# ================== Modelling ===================
+# ================== MLFLOW SETUP ==================
 mlflow.set_tracking_uri("https://dagshub.com/AkasSakti/MentalheaLth.mlflow")
 os.environ['MLFLOW_TRACKING_USERNAME'] = 'AkasSakti'
 os.environ['MLFLOW_TRACKING_PASSWORD'] = 'b916cd7137017c46794da717b21ff3e3275aca0b'
-
 mlflow.tensorflow.autolog()
 
 with mlflow.start_run(run_name="mental_health_bilstm"):
@@ -92,98 +90,98 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
         Dropout(chaos_rates[1]),
         Dense(1, activation='sigmoid')
     ])
-
     model.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(1e-4),
                   metrics=['accuracy', Precision(), Recall(), AUC()])
-    model.summary()
 
-    # ================== TRAIN ==================
     es = EarlyStopping(patience=3, restore_best_weights=True)
     rlr = ReduceLROnPlateau(patience=2, factor=0.5)
-    history = model.fit(X_train, y_train, validation_data=(X_val, y_val),
-                        epochs=10, batch_size=64, callbacks=[es, rlr])
+    history = model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=10, batch_size=64, callbacks=[es, rlr])
 
     # ================== EVALUATION ==================
-    val_probs = model.predict(X_val)
+    val_probs = model.predict(X_val).flatten()
     best_f1, best_t = 0, 0.5
     for t in np.arange(0.3, 0.7, 0.01):
         preds = (val_probs > t).astype(int)
         f = f1_score(y_val, preds)
         if f > best_f1:
             best_f1, best_t = f, t
-
-    print(f"\nBest threshold: {best_t:.2f}, F1: {best_f1:.3f}")
     val_preds = (val_probs > best_t).astype(int)
-    print(classification_report(y_val, val_preds))
-    print("AUC:", roc_auc_score(y_val, val_probs))
 
-    # ================== CONFUSION MATRIX ==================
+    acc = accuracy_score(y_val, val_preds)
+    prec = precision_score(y_val, val_preds)
+    rec = recall_score(y_val, val_preds)
+    f1 = f1_score(y_val, val_preds)
+    logloss = log_loss(y_val, val_probs)
+    roc = roc_auc_score(y_val, val_probs)
+    mlflow.log_metrics({"accuracy": acc, "precision": prec, "recall": rec, "f1_score": f1, "log_loss": logloss, "roc_auc": roc})
+
+    print(f"\n=== METRICS ===\nAccuracy: {acc:.4f}\nPrecision: {prec:.4f}\nRecall: {rec:.4f}\nF1 Score: {f1:.4f}\nLog Loss: {logloss:.4f}\nROC AUC: {roc:.4f}")
+
+    # ================== PLOTTING ==================
     plt.figure(figsize=(5,5))
     sns.heatmap(confusion_matrix(y_val, val_preds), annot=True, fmt='d', cmap='Blues')
     plt.title("Confusion Matrix")
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    confusion_path = os.path.join(artifacts, "training_confusion_matrix.png")
-    plt.savefig(confusion_path)
-    plt.close()
+    conf_path = os.path.join(artifacts, "training_confusion_matrix.png")
+    plt.savefig(conf_path); plt.close()
 
-    # ================== PRC ==================
-    from sklearn.metrics import precision_recall_curve
-    precision, recall, _ = precision_recall_curve(y_val, val_probs)
-    plt.figure()
-    plt.plot(recall, precision, marker='.')
-    plt.title('Precision-Recall Curve')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
+    p, r, _ = precision_recall_curve(y_val, val_probs)
+    plt.plot(r, p, marker='.')
+    plt.title("Precision-Recall Curve"); plt.xlabel("Recall"); plt.ylabel("Precision")
     prc_path = os.path.join(artifacts, "training_precision_recall_curve.png")
-    plt.savefig(prc_path)
-    plt.close()
+    plt.savefig(prc_path); plt.close()
 
-    # ================== ROC ==================
-    from sklearn.metrics import roc_curve
     fpr, tpr, _ = roc_curve(y_val, val_probs)
-    plt.figure()
     plt.plot(fpr, tpr, marker='.')
-    plt.title('ROC Curve')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
+    plt.title("ROC Curve"); plt.xlabel("FPR"); plt.ylabel("TPR")
     roc_path = os.path.join(artifacts, "training_roc_curve.png")
-    plt.savefig(roc_path)
-    plt.close()
+    plt.savefig(roc_path); plt.close()
 
-    # ================== SHAP Estimator HTML (FIXED) ==================
+    # ================== SHAP HTML ==================
     explainer = shap.Explainer(model, X_val[:200])
     sv = explainer(X_val[:200])
-    estimator_html_path = os.path.join(artifacts, "estimator.html")
     shap_html = shap.plots.force(sv[0], matplotlib=False)
-    shap.save_html(estimator_html_path, shap_html)
+    est_path = os.path.join(artifacts, "estimator.html")
+    shap.save_html(est_path, shap_html)
 
-    # ================== SAVE MODEL ==================
-    model_path = os.path.join(artifacts, "mental_health_model.h5")
-    submission_path = os.path.join(artifacts, "submission.csv")
-    model.save(model_path)
-    print("Model disimpan di:", model_path)
+    # ================== MODEL SAVE & SUBMISSION ==================
+    h5_path = os.path.join(artifacts, "mental_health_model.h5")
+    model.save(h5_path)
 
-    # ================== SUBMISSION ==================
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
     test_df['tweet'] = test_df['tweet'].astype(str).apply(clean_text)
     seq = tokenizer.texts_to_sequences(test_df['tweet'])
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     tpad = pad_sequences(seq, maxlen=50, padding='post')
     preds = (model.predict(tpad) > best_t).astype(int).flatten()
+    submission_path = os.path.join(artifacts, "submission.csv")
     pd.DataFrame({'id': test_df['id'], 'label': preds}).to_csv(submission_path, index=False)
-    print("✅ Selesai dan submission.csv telah dibuat di:", submission_path)
 
-    # ================== LOG TO MLFLOW ==================
-    mlflow.log_artifact(model_path)
-    mlflow.log_artifact(submission_path)
-    mlflow.log_artifact(confusion_path)
-    mlflow.log_artifact(prc_path)
-    mlflow.log_artifact(roc_path)
-    mlflow.log_artifact(estimator_html_path)
-    print("✅ Semua artefak dilog ke MLflow/DagsHub.")
+    # ================== SAVE ARTIFACTS ==================
+    model_pkl_path = os.path.join(artifacts, "model.pkl")
+    joblib.dump(model, model_pkl_path)
 
-# ================== STREAMLIT INFO ==================
-print("\nUntuk menjalankan aplikasi Streamlit, gunakan perintah:")
-print("streamlit run app.py")
-print("Jika di server publik, akses: http://localhost:8501 atau sesuai alamat yang diberikan Streamlit.")
+    req_path = os.path.join(artifacts, "requirements.txt")
+    with open(req_path, "w") as f:
+        f.write("tensorflow\nmlflow\nscikit-learn\npandas\nnumpy\nshap\nmatplotlib\nseaborn\nimbalanced-learn\n")
+
+    from mlflow.utils.environment import _mlflow_conda_env
+    conda_env = _mlflow_conda_env(
+        additional_pip_deps=["tensorflow", "mlflow", "scikit-learn", "pandas", "numpy", "shap", "matplotlib", "seaborn", "imbalanced-learn"]
+    )
+    conda_env_path = os.path.join(artifacts, "conda.yaml")
+    with open(conda_env_path, "w") as f:
+        f.write(conda_env)
+
+    mlflow.tensorflow.save_model(model, path=os.path.join(artifacts, "model"))
+    python_env_path = os.path.join(artifacts, "python_env.yaml")
+    with open(python_env_path, "w") as f:
+        f.write(conda_env)
+
+    for f in [h5_path, submission_path, conf_path, prc_path, roc_path, est_path, model_pkl_path, req_path, conda_env_path, python_env_path]:
+        mlflow.log_artifact(f)
+
+    print("✅ Semua artefak berhasil dilog ke MLflow/DagsHub.")
+
+print("\n📌 Jalankan `streamlit run app.py` untuk melihat hasil.")
