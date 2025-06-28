@@ -34,7 +34,9 @@ def get_tokenizer_and_config():
     return tokenizer, oov_index, 20000
 
 def load_threshold():
-    with open("artifacts/threshold.txt", "r") as f:
+    basedir = os.path.dirname(__file__)
+    threshold_path = os.path.join(basedir, "artifacts", "threshold.txt")
+    with open(threshold_path, "r") as f:
         t = float(f.read().strip())
         assert 0 < t < 1, "Threshold harus antara 0 dan 1"
         return t
