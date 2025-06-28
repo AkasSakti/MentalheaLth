@@ -1,4 +1,3 @@
-# ================== LIBRARY & SETUP ==================
 import os, re, yaml, numpy as np, pandas as pd
 import matplotlib.pyplot as plt, seaborn as sns
 import tensorflow as tf
@@ -15,12 +14,10 @@ from imblearn.over_sampling import SMOTE
 import mlflow
 import mlflow.tensorflow
 
-# ================== PATH SETUP ==================
 base_dir = "dataset"
 artifacts = os.path.join("MentalheaLth", "artifacts")
 os.makedirs(artifacts, exist_ok=True)
 
-# ================== UTILITY ==================
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"http\S+|@\w+|#\w+|[^a-z\s]", "", text)
@@ -45,7 +42,6 @@ def chaos_dropout_sequence(length, x0=0.7, r=3.9):
         drops.append(np.clip(x, 0.2, 0.5))
     return drops
 
-# ================== DATA PREP ==================
 df = pd.read_csv(os.path.join(base_dir, "train.csv"))
 df['tweet'] = df['tweet'].astype(str).apply(clean_text)
 y = df['label'].values
@@ -64,7 +60,6 @@ X_sm = X_sm.reshape(-1, 50)
 X_train, X_val, y_train, y_val = train_test_split(X_sm, y_sm, test_size=0.2, random_state=42)
 embedding_matrix = load_glove(os.path.join(base_dir, "glove.6B.100d.txt"), 100, tokenizer.word_index, 20000)
 
-# ================== MLFLOW SETUP ==================
 mlflow.set_tracking_uri("https://dagshub.com/AkasSakti/MentalheaLth.mlflow")
 os.environ["MLFLOW_TRACKING_USERNAME"] = os.getenv("MLFLOW_TRACKING_USERNAME")
 os.environ["MLFLOW_TRACKING_PASSWORD"] = os.getenv("MLFLOW_TRACKING_PASSWORD")
@@ -89,7 +84,6 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
                         callbacks=[EarlyStopping(patience=3, restore_best_weights=True),
                                    ReduceLROnPlateau(patience=2, factor=0.5)])
 
-    # ========== METRICS ==========
     val_probs = model.predict(X_val).flatten()
     best_f1, best_t = 0, 0.5
     for t in np.arange(0.3, 0.7, 0.01):
@@ -108,31 +102,28 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
 
     mlflow.log_metrics({"accuracy": acc, "precision": prec, "recall": rec, "f1_score": f1, "log_loss": logloss, "roc_auc": roc})
 
-    # ========== VISUALIZATIONS ==========
     plt.figure(figsize=(5, 5))
     sns.heatmap(confusion_matrix(y_val, val_preds), annot=True, fmt='d', cmap='Blues')
-    plt.title("Confusion Matrix")
     conf_path = os.path.join(artifacts, "training_confusion_matrix.png")
     plt.savefig(conf_path); plt.close()
 
     p, r, _ = precision_recall_curve(y_val, val_probs)
     plt.plot(r, p)
-    plt.title("PR Curve"); prc_path = os.path.join(artifacts, "training_precision_recall_curve.png")
+    prc_path = os.path.join(artifacts, "training_precision_recall_curve.png")
     plt.savefig(prc_path); plt.close()
 
     fpr, tpr, _ = roc_curve(y_val, val_probs)
     plt.plot(fpr, tpr)
-    plt.title("ROC Curve"); roc_path = os.path.join(artifacts, "training_roc_curve.png")
+    roc_path = os.path.join(artifacts, "training_roc_curve.png")
     plt.savefig(roc_path); plt.close()
 
-    # ========== SHAP PLOT ==========
-    explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:200])
-    sv = explainer(X_val[:200])
-    shap_html = shap.plots.force(sv[0], matplotlib=False)
+    explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:50])
+    sv = explainer(X_val[:50])
+    shap_html = shap.plots.force(sv[0], matplotlib=False).data
     est_path = os.path.join(artifacts, "estimator.html")
-    shap.save_html(est_path, shap_html)
+    with open(est_path, "w") as f:
+        f.write(shap_html)
 
-    # ========== PREDICT TEST ==========
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
     test_df['tweet'] = test_df['tweet'].astype(str).apply(clean_text)
     seq = tokenizer.texts_to_sequences(test_df['tweet'])
@@ -142,7 +133,6 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     submission_path = os.path.join(artifacts, "submission.csv")
     pd.DataFrame({'id': test_df['id'], 'label': test_preds}).to_csv(submission_path, index=False)
 
-    # ========== ARTIFACT SAVE ==========
     model_path = os.path.join(artifacts, "mental_health_model.h5")
     model.save(model_path)
 
@@ -167,13 +157,11 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     with open(pyenv_path, "w") as f:
         yaml.dump(conda_env, f)
 
-    # ========== LOG ARTEFAK ==========
     for f in [model_path, submission_path, conf_path, prc_path, roc_path,
               est_path, req_path, conda_path, pyenv_path]:
-        mlflow.log_artifact(f)
+        if os.path.exists(f) and os.path.getsize(f) > 0:
+            mlflow.log_artifact(f)
 
     mlflow.tensorflow.save_model(model, path=os.path.join(artifacts, "model"))
 
-    print("✅ Semua artefak berhasil disimpan dan dilog ke MLflow/DagsHub.")
-
-print("\n📌 Jalankan `streamlit run app.py` untuk melihat hasil.")
+    print("✅ Artefak tersimpan & dilog ke MLflow/DagsHub.")
