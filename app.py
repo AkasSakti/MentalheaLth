@@ -39,6 +39,10 @@ def load_threshold():
         assert 0 < t < 1, "Threshold harus antara 0 dan 1"
         return t
 
+model = load_model()
+tokenizer, oov_index, num_words = get_tokenizer_and_config()
+threshold = load_threshold()
+
 # ================== INFERENCE FUNCTION ==================
 def predict_text(text):
     cleaned = clean_text(text)
