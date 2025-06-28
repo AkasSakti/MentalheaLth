@@ -22,7 +22,7 @@ def clean_text(text):
 # ================== LOAD MODEL ==================
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("artifacts/mental_health_model.h5")
+    return tf.keras.models.load_model("artifacts/mental_health_model.keras")
 
 # ================== LOAD TOKENIZER SETUP ==================
 @st.cache_resource
