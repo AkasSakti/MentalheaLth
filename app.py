@@ -33,9 +33,11 @@ def get_tokenizer_and_config():
     oov_index = tokenizer.word_index['<OOV>']
     return tokenizer, oov_index, 20000
 
-model = load_model()
-tokenizer, oov_index, num_words = get_tokenizer_and_config()
-threshold = 0.37  # HARD FIXED THRESHOLD
+def load_threshold():
+    with open("artifacts/threshold.txt", "r") as f:
+        t = float(f.read().strip())
+        assert 0 < t < 1, "Threshold harus antara 0 dan 1"
+        return t
 
 # ================== INFERENCE FUNCTION ==================
 def predict_text(text):
