@@ -14,10 +14,12 @@ from imblearn.over_sampling import SMOTE
 import mlflow
 import mlflow.tensorflow
 
+# ========== PATHS ==========
 base_dir = "dataset"
 artifacts = os.path.join("MentalheaLth", "artifacts")
 os.makedirs(artifacts, exist_ok=True)
 
+# ========== FUNCTIONS ==========
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"http\S+|@\w+|#\w+|[^a-z\s]", "", text)
@@ -42,6 +44,7 @@ def chaos_dropout_sequence(length, x0=0.7, r=3.9):
         drops.append(np.clip(x, 0.2, 0.5))
     return drops
 
+# ========== DATA PREP ==========
 df = pd.read_csv(os.path.join(base_dir, "train.csv"))
 df['tweet'] = df['tweet'].astype(str).apply(clean_text)
 y = df['label'].values
@@ -60,6 +63,7 @@ X_sm = X_sm.reshape(-1, 50)
 X_train, X_val, y_train, y_val = train_test_split(X_sm, y_sm, test_size=0.2, random_state=42)
 embedding_matrix = load_glove(os.path.join(base_dir, "glove.6B.100d.txt"), 100, tokenizer.word_index, 20000)
 
+# ========== MLFLOW ==========
 mlflow.set_tracking_uri("https://dagshub.com/AkasSakti/MentalheaLth.mlflow")
 os.environ["MLFLOW_TRACKING_USERNAME"] = os.getenv("MLFLOW_TRACKING_USERNAME")
 os.environ["MLFLOW_TRACKING_PASSWORD"] = os.getenv("MLFLOW_TRACKING_PASSWORD")
@@ -100,7 +104,10 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     logloss = log_loss(y_val, val_probs)
     roc = roc_auc_score(y_val, val_probs)
 
-    mlflow.log_metrics({"accuracy": acc, "precision": prec, "recall": rec, "f1_score": f1, "log_loss": logloss, "roc_auc": roc})
+    mlflow.log_metrics({
+        "accuracy": acc, "precision": prec, "recall": rec,
+        "f1_score": f1, "log_loss": logloss, "roc_auc": roc
+    })
 
     plt.figure(figsize=(5, 5))
     sns.heatmap(confusion_matrix(y_val, val_preds), annot=True, fmt='d', cmap='Blues')
@@ -117,12 +124,11 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     roc_path = os.path.join(artifacts, "training_roc_curve.png")
     plt.savefig(roc_path); plt.close()
 
+    # ✅ FIX SHAP SAVE HTML
     explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:50])
     sv = explainer(X_val[:50])
-    shap_html = shap.plots.force(sv[0], matplotlib=False).data
     est_path = os.path.join(artifacts, "estimator.html")
-    with open(est_path, "w") as f:
-        f.write(shap_html)
+    shap.save_html(est_path, sv[0])
 
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
     test_df['tweet'] = test_df['tweet'].astype(str).apply(clean_text)
@@ -144,10 +150,10 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
         ]))
 
     from mlflow.utils.environment import _mlflow_conda_env
-    conda_env = _mlflow_conda_env(
-        additional_pip_deps=["tensorflow", "mlflow", "scikit-learn", "pandas",
-                             "numpy", "matplotlib", "seaborn", "imbalanced-learn", "shap", "pyyaml"]
-    )
+    conda_env = _mlflow_conda_env(additional_pip_deps=[
+        "tensorflow", "mlflow", "scikit-learn", "pandas",
+        "numpy", "matplotlib", "seaborn", "imbalanced-learn", "shap", "pyyaml"
+    ])
 
     conda_path = os.path.join(artifacts, "conda.yaml")
     with open(conda_path, "w") as f:
