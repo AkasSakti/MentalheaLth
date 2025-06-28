@@ -24,7 +24,7 @@ def clean_text(text):
 def load_model():
     return tf.keras.models.load_model("artifacts/mental_health_model.keras")
 
-# ================== LOAD TOKENIZER SETUP ==================
+# ================== LOAD TOKENIZER ==================
 @st.cache_resource
 def get_tokenizer_and_config():
     tokenizer = Tokenizer(num_words=20000, oov_token='<OOV>')
@@ -34,8 +34,18 @@ def get_tokenizer_and_config():
     oov_index = tokenizer.word_index['<OOV>']
     return tokenizer, oov_index, 20000
 
+# ================== LOAD THRESHOLD ==================
+@st.cache_data
+def load_threshold():
+    try:
+        with open("artifacts/threshold.txt", "r") as f:
+            return float(f.read().strip())
+    except:
+        return 0.5  # fallback default
+
 model = load_model()
 tokenizer, oov_index, num_words = get_tokenizer_and_config()
+threshold = load_threshold()
 
 # ================== INFERENCE FUNCTION ==================
 def predict_text(text):
@@ -44,7 +54,7 @@ def predict_text(text):
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     padded = pad_sequences(seq, maxlen=50, padding='post')
     prob = model.predict(padded)[0][0]
-    label = "🟢 Positive" if prob > 0.5 else "🔴 Negative"
+    label = "Depresi" if prob > threshold else "Tidak Depresi"
     return label, prob
 
 # ================== MAIN FORM ==================
@@ -54,9 +64,9 @@ with st.form("input_form"):
 
 if submit and user_input:
     label, prob = predict_text(user_input)
-    st.markdown(f"### Hasil Prediksi: {label}")
+    st.markdown(f"### Hasil Prediksi: **{label}**")
     st.progress(int(prob * 100))
-    st.markdown(f"`Probabilitas`: {prob:.4f}")
+    st.markdown(f"`Probabilitas`: {prob:.4f} — Threshold: `{threshold:.2f}`")
 
 # ================== BATCH PREDIKSI ==================
 st.subheader("📤 Upload File CSV untuk Prediksi Massal")
@@ -72,7 +82,7 @@ if uploaded:
         seqs = [[t if t < num_words else oov_index for t in s] for s in seqs]
         padded = pad_sequences(seqs, maxlen=50, padding='post')
         probs = model.predict(padded).flatten()
-        labels = ["Positive" if p > 0.5 else "Negative" for p in probs]
+        labels = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
         df['prediction'] = labels
         df['confidence'] = probs
         st.dataframe(df[['tweet', 'prediction', 'confidence']].head(10))
