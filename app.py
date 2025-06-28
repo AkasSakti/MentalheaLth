@@ -33,6 +33,7 @@ def get_tokenizer_and_config():
     oov_index = tokenizer.word_index['<OOV>']
     return tokenizer, oov_index, 20000
 
+# ================== LOAD THRESHOLD ==================
 def load_threshold():
     basedir = os.path.dirname(__file__)
     threshold_path = os.path.join(basedir, "artifacts", "threshold.txt")
@@ -41,6 +42,7 @@ def load_threshold():
         assert 0 < t < 1, "Threshold harus antara 0 dan 1"
         return t
 
+# ================== SETUP MODEL ==================
 model = load_model()
 tokenizer, oov_index, num_words = get_tokenizer_and_config()
 threshold = load_threshold()
@@ -52,18 +54,19 @@ def predict_text(text):
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     padded = pad_sequences(seq, maxlen=50, padding='post')
     prob = model.predict(padded)[0][0]
-    return "Depresi" if prob > threshold else "Tidak Depresi"
+    label = "Depresi" if prob > threshold else "Tidak Depresi"
+    return label, prob
 
 # ================== MAIN FORM ==================
 with st.form("input_form"):
     user_input = st.text_area("Masukkan tweet yang ingin diklasifikasi:")
     submit = st.form_submit_button("🔍 Prediksi")
-st.write(f"Probabilitas model: {prob:.4f}")
-st.write(f"Threshold: {threshold:.2f}")
 
 if submit and user_input:
-    label = predict_text(user_input)
+    label, prob = predict_text(user_input)
     st.markdown(f"### Hasil Prediksi: **{label}**")
+    st.write(f"🧪 Probabilitas model: `{prob:.4f}`")
+    st.write(f"🎯 Threshold aktif: `{threshold:.2f}`")
 
 # ================== BATCH PREDIKSI ==================
 st.subheader("📤 Upload File CSV untuk Prediksi Massal")
@@ -80,7 +83,8 @@ if uploaded:
         padded = pad_sequences(seqs, maxlen=50, padding='post')
         probs = model.predict(padded).flatten()
         df['prediction'] = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
-        st.dataframe(df[['tweet', 'prediction']].head(10))
+        df['confidence'] = probs
+        st.dataframe(df[['tweet', 'prediction', 'confidence']].head(10))
         st.download_button("💾 Download Hasil", df.to_csv(index=False), "prediction_results.csv", "text/csv")
 
 # ================== GRAFIK EVALUASI ==================
