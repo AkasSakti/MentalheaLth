@@ -139,7 +139,7 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     submission_path = os.path.join(artifacts, "submission.csv")
     pd.DataFrame({'id': test_df['id'], 'label': test_preds}).to_csv(submission_path, index=False)
 
-    model_path = os.path.join(artifacts, "mental_health_model.h5")
+    model_path = os.path.join(artifacts, "mental_health_model.keras")
     model.save(model_path)
 
     req_path = os.path.join(artifacts, "requirements.txt")
