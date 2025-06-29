@@ -124,11 +124,10 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
     roc_path = os.path.join(artifacts, "training_roc_curve.png")
     plt.savefig(roc_path); plt.close()
 
-    # ✅ FIX SHAP SAVE HTML
     explainer = shap.Explainer(lambda x: model(x, training=False), X_val[:50])
     sv = explainer(X_val[:50])
     viz = shap.plots.force(sv[0], matplotlib=False)
-    est_path = os.path.join(artifacts, "estimator.html")  # <-- tambahkan baris ini
+    est_path = os.path.join(artifacts, "estimator.html")
     shap.save_html(est_path, viz)
 
     test_df = pd.read_csv(os.path.join(base_dir, "test.csv"))
@@ -171,4 +170,14 @@ with mlflow.start_run(run_name="mental_health_bilstm"):
 
     mlflow.tensorflow.save_model(model, path=os.path.join(artifacts, "model"))
 
+    # ========== SAVE TF-IDF CORPUS REFERENCE ==========
+    corpus_out = os.path.join(artifacts, "tfidf_reference.csv")
+    df_pos = df[df['label'] == 1].sample(n=100, random_state=42)
+    df_neg = df[df['label'] == 0].sample(n=100, random_state=42)
+    corpus_df = pd.concat([df_pos, df_neg])
+    corpus_df = corpus_df[['tweet', 'label']]
+    corpus_df.to_csv(corpus_out, index=False)
+    mlflow.log_artifact(corpus_out)
+
     print("✅ Artefak tersimpan & dilog ke MLflow/DagsHub.")
+    print("✅ TF-IDF corpus referensi tersimpan:", corpus_out)
