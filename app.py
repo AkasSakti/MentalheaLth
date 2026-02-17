@@ -9,6 +9,20 @@ import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+
+class CompatibleInputLayer(tf.keras.layers.InputLayer):
+    def __init__(self, *args, batch_shape=None, **kwargs):
+        # Backward compatibility for model configs that store `batch_shape`.
+        if batch_shape is not None and "batch_input_shape" not in kwargs:
+            kwargs["batch_input_shape"] = tuple(batch_shape)
+        super().__init__(*args, **kwargs)
+
+
+class CompatibleDTypePolicy(tf.keras.mixed_precision.Policy):
+    @classmethod
+    def from_config(cls, config):
+        return tf.keras.mixed_precision.Policy(config.get("name", "float32"))
+
 # ================== DARK EXPRESSIONS ==================
 dark_expressions = [
     "i want to die", "i wanna die", "want to kill myself", "want to end it all", "i'm done with life",
@@ -41,7 +55,38 @@ def clean_text(text):
 # ================== LOAD MODEL ==================
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("artifacts/mental_health_model.keras")
+    model_paths = [
+        os.path.join("artifacts", "mental_health_model.keras"),
+        os.path.join("artifacts", "mental_health_model.h5"),
+    ]
+    last_error = None
+    for path in model_paths:
+        if os.path.exists(path):
+            try:
+                return tf.keras.models.load_model(
+                    path,
+                    compile=False,
+                    safe_mode=False,
+                    custom_objects={
+                        "InputLayer": CompatibleInputLayer,
+                        "DTypePolicy": CompatibleDTypePolicy,
+                    },
+                )
+            except TypeError:
+                return tf.keras.models.load_model(
+                    path,
+                    compile=False,
+                    custom_objects={
+                        "InputLayer": CompatibleInputLayer,
+                        "DTypePolicy": CompatibleDTypePolicy,
+                    },
+                )
+            except Exception as e:
+                last_error = e
+    raise RuntimeError(
+        "Failed to load model from artifacts/mental_health_model.keras or artifacts/mental_health_model.h5. "
+        f"Original error: {last_error}"
+    )
 
 @st.cache_resource
 def get_tokenizer_and_config():
