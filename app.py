@@ -55,7 +55,7 @@ def load_threshold():
     threshold_path = os.path.join("artifacts", "threshold.txt")
     with open(threshold_path, "r") as f:
         t = float(f.read().strip())
-        assert 0 < t < 1, "Threshold harus antara 0 dan 1"
+        assert 0 < t < 1, "Threshold must be between 0 and 1"
         return t
 
 @st.cache_resource
@@ -77,7 +77,7 @@ def predict_text(text):
     seq = [[t if t < num_words else oov_index for t in s] for s in seq]
     padded = pad_sequences(seq, maxlen=50, padding='post')
     prob = model.predict(padded, verbose=0)[0][0]
-    label = "Depresi" if prob > threshold else "Tidak Depresi"
+    label = "Depression" if prob > threshold else "No Depression"
     return label, prob, cleaned
 
 def find_most_similar(cleaned_text):
@@ -96,46 +96,46 @@ with st.form("input_form"):
 
 if submit and user_input:
     label, prob, cleaned = predict_text(user_input)
-    st.markdown(f"### Predict Result: **{label}**")
+    st.markdown(f"### Prediction Result: **{label}**")
     st.write(f"🧪 Model Probability: `{prob:.4f}`")
-    st.write(f"🎯 Active Threshold : `{threshold:.2f}`")
+    st.write(f"🎯 Active Threshold: `{threshold:.2f}`")
 
     is_dark = contains_dark_expression(user_input)
     if prob < 0.2:
         sim_text, sim_label, sim_score = find_most_similar(cleaned)
-        st.info("✳️ The model is not confident. Here are the most similar references from the corpus:")
+        st.info("✳️ The model is uncertain. Here is the most similar reference from the corpus:")
         st.code(sim_text)
-        st.write(f"➡️ Label referensi: **{'Depression' if sim_label == 1 else 'No Depression'}**, Similarity: `{sim_score:.3f}`")
+        st.write(f"➡️ Reference label: **{'Depression' if sim_label == 1 else 'No Depression'}**, Similarity: `{sim_score:.3f}`")
 
     if prob < 0.1 and is_dark:
-        st.warning("⚠️ The sentence contains potentially risky expressions, but the model is uncertain. Manual review is required!")
+        st.warning("⚠️ The sentence contains potentially risky expressions, but the model is uncertain. Manual review is required.")
     elif is_dark:
         st.info("The sentence contains potentially risky expressions.")
 
 # ================== BATCH PREDIKSI ==================
-st.subheader("📤 Upload File CSV for bulk Predict")
-uploaded = st.file_uploader("Upload a CSV file with a tweet column.", type=["csv"])
+st.subheader("📤 Upload CSV File for Batch Prediction")
+uploaded = st.file_uploader("Upload a CSV file that contains a `tweet` column.", type=["csv"])
 
 if uploaded:
     df = pd.read_csv(uploaded)
     if 'tweet' not in df.columns:
-        st.error("❌ Column 'tweet' Not Found.")
+        st.error("❌ Column `tweet` not found.")
     else:
         df['clean'] = df['tweet'].astype(str).apply(clean_text)
         seqs = tokenizer.texts_to_sequences(df['clean'])
         seqs = [[t if t < num_words else oov_index for t in s] for s in seqs]
         padded = pad_sequences(seqs, maxlen=50, padding='post')
         probs = model.predict(padded, verbose=0).flatten()
-        df['prediction'] = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
+        df['prediction'] = ["Depression" if p > threshold else "No Depression" for p in probs]
         df['confidence'] = probs
         st.dataframe(df[['tweet', 'prediction', 'confidence']].head(10))
-        st.download_button("💾 Download Result", df.to_csv(index=False), "prediction_results.csv", "text/csv")
+        st.download_button("💾 Download Results", df.to_csv(index=False), "prediction_results.csv", "text/csv")
 
 # ================== GRAFIK EVALUASI ==================
-st.subheader("📈 Visualisation Model Evaluation")
+st.subheader("📈 Model Evaluation Visualizations")
 for chart in ["training_confusion_matrix.png", "training_precision_recall_curve.png", "training_roc_curve.png"]:
     path = os.path.join("artifacts", chart)
     if os.path.exists(path):
         st.image(path, caption=chart.replace("_", " ").title(), use_column_width=True)
     else:
-        st.warning(f"Can't found {chart}")
+        st.warning(f"Cannot find {chart}")
