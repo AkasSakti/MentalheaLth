@@ -30,7 +30,7 @@ def contains_dark_expression(text):
 # ================== SETUP STREAMLIT ==================
 st.set_page_config(page_title="Mental Health Tweet Classifier", layout="centered")
 st.title("🧠 Mental Health Tweet Classifier")
-st.markdown("Klasifikasi tweet terkait kesehatan mental menggunakan model BiLSTM dan GloVe.")
+st.markdown("BiLSTM-Based Mental Health Classification on Twitter Data with GloVe Representations.")
 
 # ================== TEXT CLEANING ==================
 def clean_text(text):
@@ -91,35 +91,35 @@ def find_most_similar(cleaned_text):
 
 # ================== MAIN FORM ==================
 with st.form("input_form"):
-    user_input = st.text_area("Masukkan tweet yang ingin diklasifikasi:")
-    submit = st.form_submit_button("🔍 Prediksi")
+    user_input = st.text_area("Enter the tweet you want to classify:")
+    submit = st.form_submit_button("🔍 Predict")
 
 if submit and user_input:
     label, prob, cleaned = predict_text(user_input)
-    st.markdown(f"### Hasil Prediksi: **{label}**")
-    st.write(f"🧪 Probabilitas model: `{prob:.4f}`")
-    st.write(f"🎯 Threshold aktif: `{threshold:.2f}`")
+    st.markdown(f"### Predict Result: **{label}**")
+    st.write(f"🧪 Model Probability: `{prob:.4f}`")
+    st.write(f"🎯 Active Threshold : `{threshold:.2f}`")
 
     is_dark = contains_dark_expression(user_input)
     if prob < 0.2:
         sim_text, sim_label, sim_score = find_most_similar(cleaned)
-        st.info("✳️ Model tidak yakin. Berikut referensi paling mirip dari korpus:")
+        st.info("✳️ The model is not confident. Here are the most similar references from the corpus:")
         st.code(sim_text)
-        st.write(f"➡️ Label referensi: **{'Depresi' if sim_label == 1 else 'Tidak Depresi'}**, Similaritas: `{sim_score:.3f}`")
+        st.write(f"➡️ Label referensi: **{'Depression' if sim_label == 1 else 'No Depression'}**, Similarity: `{sim_score:.3f}`")
 
     if prob < 0.1 and is_dark:
-        st.warning("⚠️ Kalimat mengandung ekspresi berisiko, tapi model tidak yakin. Perlu review manual!")
+        st.warning("⚠️ The sentence contains potentially risky expressions, but the model is uncertain. Manual review is required!")
     elif is_dark:
-        st.info("Kalimat mengandung ekspresi berisiko.")
+        st.info("The sentence contains potentially risky expressions.")
 
 # ================== BATCH PREDIKSI ==================
-st.subheader("📤 Upload File CSV untuk Prediksi Massal")
-uploaded = st.file_uploader("Upload file CSV dengan kolom `tweet`", type=["csv"])
+st.subheader("📤 Upload File CSV for bulk Predict")
+uploaded = st.file_uploader("Upload a CSV file with a tweet column.", type=["csv"])
 
 if uploaded:
     df = pd.read_csv(uploaded)
     if 'tweet' not in df.columns:
-        st.error("❌ Kolom 'tweet' tidak ditemukan.")
+        st.error("❌ Column 'tweet' Not Found.")
     else:
         df['clean'] = df['tweet'].astype(str).apply(clean_text)
         seqs = tokenizer.texts_to_sequences(df['clean'])
@@ -129,13 +129,13 @@ if uploaded:
         df['prediction'] = ["Depresi" if p > threshold else "Tidak Depresi" for p in probs]
         df['confidence'] = probs
         st.dataframe(df[['tweet', 'prediction', 'confidence']].head(10))
-        st.download_button("💾 Download Hasil", df.to_csv(index=False), "prediction_results.csv", "text/csv")
+        st.download_button("💾 Download Result", df.to_csv(index=False), "prediction_results.csv", "text/csv")
 
 # ================== GRAFIK EVALUASI ==================
-st.subheader("📈 Visualisasi Evaluasi Model")
+st.subheader("📈 Visualisation Model Evaluation")
 for chart in ["training_confusion_matrix.png", "training_precision_recall_curve.png", "training_roc_curve.png"]:
     path = os.path.join("artifacts", chart)
     if os.path.exists(path):
         st.image(path, caption=chart.replace("_", " ").title(), use_column_width=True)
     else:
-        st.warning(f"Gagal menemukan {chart}")
+        st.warning(f"Can't found {chart}")
