@@ -24,8 +24,10 @@ jobs:
       - name: 📦 Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install mlflow dagshub shap imbalanced-learn pyyaml
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir --upgrade-strategy only-if-needed mlflow dagshub shap pyyaml
+          pip install --no-cache-dir --force-reinstall numpy==1.24.3 pandas==1.5.3
+          pip check
 
       - name: 📥 Download GloVe Embedding
         run: |
